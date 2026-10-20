@@ -102,24 +102,24 @@ pub fn step_away(
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DamageAbility {
-    BasicAttack,
-    Whirlwind,
+    HeroAbility(String),
     EnemyMelee,
+    Poison,
 }
 
 impl DamageAbility {
-    pub fn label(self) -> &'static str {
+    pub fn label(&self) -> &str {
         match self {
-            Self::BasicAttack => "Basic attack",
-            Self::Whirlwind => "Whirlwind",
+            Self::HeroAbility(name) => name,
             Self::EnemyMelee => "Enemy melee",
+            Self::Poison => "Poison",
         }
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Damage {
     pub ability: DamageAbility,
     pub amount: f32,
@@ -134,7 +134,7 @@ impl Damage {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DamageResult {
     pub damage: Damage,
     pub applied: f32,
@@ -155,8 +155,6 @@ pub struct AbilitySpec {
 #[derive(Clone, Copy, Debug)]
 pub struct HeroBalance {
     pub stats: ActorStats,
-    pub attack: AbilitySpec,
-    pub whirlwind: AbilitySpec,
     pub loot_move_speed_multiplier: f32,
     pub retreat_move_speed_multiplier: f32,
     pub retreat_healing_per_second: f32,
@@ -182,18 +180,6 @@ impl Default for GameBalance {
                     attack_speed: 1.0,
                 })
                 .with_modifiers(Default::default()),
-                attack: AbilitySpec {
-                    base_damage: 12.0,
-                    damage_scaling: 1.0,
-                    range: 1.45,
-                    cooldown: 0.65,
-                },
-                whirlwind: AbilitySpec {
-                    base_damage: 20.0,
-                    damage_scaling: 1.0,
-                    range: 3.5,
-                    cooldown: 4.0,
-                },
                 loot_move_speed_multiplier: 5.2 / 4.6,
                 retreat_move_speed_multiplier: 5.5 / 4.6,
                 retreat_healing_per_second: 18.0,
@@ -235,13 +221,14 @@ impl Health {
 
     pub fn apply_damage(&mut self, damage: Damage, defense: f32) -> DamageResult {
         let health_before = self.current;
+        let damage_amount = damage.amount;
         let damage_after_defense = damage.amount * 100.0 / (100.0 + defense.max(0.0));
         self.current = (self.current - damage_after_defense).max(0.0);
 
         DamageResult {
             damage,
             applied: health_before - self.current,
-            mitigated: damage.amount - damage_after_defense,
+            mitigated: damage_amount - damage_after_defense,
             health_before,
             health_after: self.current,
             killed: health_before > 0.0 && self.current <= 0.0,
@@ -280,6 +267,39 @@ impl Cooldown {
 
     pub fn start(&mut self, duration: f32) {
         self.remaining = duration.max(0.0);
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct AttackWindup {
+    remaining: Option<f32>,
+}
+
+impl AttackWindup {
+    pub fn start(&mut self, duration: f32) {
+        self.remaining = Some(duration.max(0.0));
+    }
+
+    pub fn tick(&mut self, delta_seconds: f32) {
+        if let Some(remaining) = &mut self.remaining {
+            *remaining = (*remaining - delta_seconds.max(0.0)).max(0.0);
+        }
+    }
+
+    pub fn is_active(self) -> bool {
+        self.remaining.is_some()
+    }
+
+    pub fn is_complete(self) -> bool {
+        self.remaining == Some(0.0)
+    }
+
+    pub fn remaining(self) -> f32 {
+        self.remaining.unwrap_or(0.0)
+    }
+
+    pub fn cancel(&mut self) -> bool {
+        self.remaining.take().is_some()
     }
 }
 

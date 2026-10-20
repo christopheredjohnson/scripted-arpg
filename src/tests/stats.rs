@@ -97,3 +97,25 @@ fn modifier_sets_add_flat_and_percentage_values() {
         }
     );
 }
+
+#[test]
+fn temporary_modifiers_stack_with_and_clear_without_changing_permanent_modifiers() {
+    let mut stats = ActorStats::new(base_stats()).with_modifiers(StatModifiers {
+        damage: StatModifier {
+            flat: 5.0,
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+    stats.set_temporary_modifiers(StatModifiers {
+        damage: StatModifier {
+            increased: 0.5,
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+
+    assert_eq!(stats.damage(), 22.5);
+    stats.set_temporary_modifiers(StatModifiers::default());
+    assert_eq!(stats.damage(), 15.0);
+}

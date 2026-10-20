@@ -1,11 +1,11 @@
 use bevy::prelude::Component;
 use std::ops::{Add, AddAssign};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 const MIN_ATTACK_SPEED: f32 = 0.05;
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct StatModifier {
     pub flat: f32,
@@ -35,7 +35,7 @@ impl AddAssign for StatModifier {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct StatModifiers {
     pub max_health: StatModifier,
@@ -43,6 +43,22 @@ pub struct StatModifiers {
     pub defense: StatModifier,
     pub move_speed: StatModifier,
     pub attack_speed: StatModifier,
+}
+
+impl StatModifiers {
+    pub fn scaled(self, multiplier: f32) -> Self {
+        let scale = |modifier: StatModifier| StatModifier {
+            flat: modifier.flat * multiplier,
+            increased: modifier.increased * multiplier,
+        };
+        Self {
+            max_health: scale(self.max_health),
+            damage: scale(self.damage),
+            defense: scale(self.defense),
+            move_speed: scale(self.move_speed),
+            attack_speed: scale(self.attack_speed),
+        }
+    }
 }
 
 impl Add for StatModifiers {
@@ -79,6 +95,7 @@ pub struct BaseStats {
 pub struct ActorStats {
     base: BaseStats,
     modifiers: StatModifiers,
+    temporary_modifiers: StatModifiers,
 }
 
 impl ActorStats {
@@ -86,6 +103,7 @@ impl ActorStats {
         Self {
             base,
             modifiers: StatModifiers::default(),
+            temporary_modifiers: StatModifiers::default(),
         }
     }
 
@@ -98,24 +116,38 @@ impl ActorStats {
         self.modifiers = modifiers;
     }
 
+    pub fn set_temporary_modifiers(&mut self, modifiers: StatModifiers) -> bool {
+        let changed = self.temporary_modifiers != modifiers;
+        self.temporary_modifiers = modifiers;
+        changed
+    }
+
+    fn combined_modifiers(self) -> StatModifiers {
+        self.modifiers + self.temporary_modifiers
+    }
+
     pub fn max_health(self) -> f32 {
-        self.modifiers.max_health.apply(self.base.max_health)
+        self.combined_modifiers()
+            .max_health
+            .apply(self.base.max_health)
     }
 
     pub fn damage(self) -> f32 {
-        self.modifiers.damage.apply(self.base.damage)
+        self.combined_modifiers().damage.apply(self.base.damage)
     }
 
     pub fn defense(self) -> f32 {
-        self.modifiers.defense.apply(self.base.defense)
+        self.combined_modifiers().defense.apply(self.base.defense)
     }
 
     pub fn move_speed(self) -> f32 {
-        self.modifiers.move_speed.apply(self.base.move_speed)
+        self.combined_modifiers()
+            .move_speed
+            .apply(self.base.move_speed)
     }
 
     pub fn attack_speed(self) -> f32 {
-        self.modifiers
+        self.combined_modifiers()
             .attack_speed
             .apply(self.base.attack_speed)
             .max(MIN_ATTACK_SPEED)

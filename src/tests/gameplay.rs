@@ -2,7 +2,7 @@ use bevy::prelude::Vec2;
 
 use crate::{
     gameplay::{
-        Ability, AbilitySpec, ArenaBounds, Damage, DamageAbility, EncounterPhase,
+        Ability, AbilitySpec, ArenaBounds, AttackWindup, Damage, DamageAbility, EncounterPhase,
         EncounterSnapshot, Health, nearest_target, resolve_encounter_phase, step_away, step_toward,
     },
     stats::{ActorStats, BaseStats},
@@ -11,7 +11,10 @@ use crate::{
 #[test]
 fn health_clamps_damage_and_healing() {
     let mut health = Health::new(100.0);
-    let result = health.apply_damage(Damage::new(DamageAbility::BasicAttack, 140.0), 0.0);
+    let result = health.apply_damage(
+        Damage::new(DamageAbility::HeroAbility("Strike".to_string()), 140.0),
+        0.0,
+    );
     assert_eq!(health.current(), 0.0);
     assert!(!health.is_alive());
     assert_eq!(result.applied, 100.0);
@@ -47,8 +50,14 @@ fn changing_max_health_preserves_health_percentage() {
 #[test]
 fn an_already_defeated_target_is_not_killed_twice() {
     let mut health = Health::new(10.0);
-    let first = health.apply_damage(Damage::new(DamageAbility::Whirlwind, 10.0), 0.0);
-    let second = health.apply_damage(Damage::new(DamageAbility::BasicAttack, 10.0), 0.0);
+    let first = health.apply_damage(
+        Damage::new(DamageAbility::HeroAbility("Whirlwind".to_string()), 10.0),
+        0.0,
+    );
+    let second = health.apply_damage(
+        Damage::new(DamageAbility::HeroAbility("Strike".to_string()), 10.0),
+        0.0,
+    );
 
     assert!(first.killed);
     assert!(!second.killed);
@@ -70,6 +79,26 @@ fn ability_cannot_activate_until_its_scaled_cooldown_finishes() {
     assert!(!ability.is_ready());
     ability.tick(0.25);
     assert!(ability.activate(2.0));
+}
+
+#[test]
+fn attack_windups_complete_and_can_be_cancelled() {
+    let mut windup = AttackWindup::default();
+    assert!(!windup.is_active());
+    assert!(!windup.cancel());
+
+    windup.start(0.5);
+    windup.tick(0.2);
+    assert!(windup.is_active());
+    assert!(!windup.is_complete());
+    assert!((windup.remaining() - 0.3).abs() < f32::EPSILON);
+    assert!(windup.cancel());
+    assert!(!windup.is_active());
+
+    windup.start(0.25);
+    windup.tick(1.0);
+    assert!(windup.is_complete());
+    assert_eq!(windup.remaining(), 0.0);
 }
 
 #[test]

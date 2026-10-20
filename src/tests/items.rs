@@ -1,5 +1,8 @@
 use crate::{
-    items::{Equipment, EquipmentSlot, Inventory, ItemDefinition, LootRarity},
+    items::{
+        Equipment, EquipmentSlot, INVENTORY_CAPACITY, Inventory, ItemDefinition, ItemInstance,
+        LootRarity,
+    },
     stats::{StatModifier, StatModifiers},
 };
 
@@ -9,23 +12,57 @@ fn item(
     rarity: LootRarity,
     slot: EquipmentSlot,
     modifiers: StatModifiers,
-) -> ItemDefinition {
-    ItemDefinition {
+) -> ItemInstance {
+    let definition = ItemDefinition {
         id: id.to_string(),
         name: name.to_string(),
         rarity,
         slot,
         modifiers,
-    }
+    };
+    ItemInstance::from_definition(id, &definition, 1, Vec::new(), &[], modifiers)
 }
 
 #[test]
 fn inventory_preserves_each_collected_item() {
     let mut inventory = Inventory::default();
-    inventory.add("scout_boots");
-    inventory.add("scout_boots");
+    let boots = item(
+        "boots-one",
+        "Scout Boots",
+        LootRarity::Common,
+        EquipmentSlot::Boots,
+        Default::default(),
+    );
+    let mut other_boots = boots.clone();
+    other_boots.instance_id = "boots-two".to_string();
+    assert!(inventory.add(boots));
+    assert!(inventory.add(other_boots));
 
     assert_eq!(inventory.len(), 2);
+}
+
+#[test]
+fn inventory_rejects_items_beyond_its_capacity() {
+    let mut inventory = Inventory::default();
+    for index in 0..INVENTORY_CAPACITY {
+        let mut boots = item(
+            "boots",
+            "Scout Boots",
+            LootRarity::Common,
+            EquipmentSlot::Boots,
+            Default::default(),
+        );
+        boots.instance_id = format!("boots-{index}");
+        assert!(inventory.add(boots));
+    }
+    assert!(inventory.is_full());
+    assert!(!inventory.add(item(
+        "overflow",
+        "Overflow Boots",
+        LootRarity::Common,
+        EquipmentSlot::Boots,
+        Default::default(),
+    )));
 }
 
 #[test]
@@ -66,27 +103,39 @@ fn equipment_combines_modifiers_from_different_slots() {
 }
 
 #[test]
-fn auto_equip_does_not_replace_an_item_with_lower_rarity() {
-    let rare = item(
-        "rare_blade",
-        "Rare Blade",
+fn auto_equip_uses_rolled_stats_instead_of_rarity() {
+    let weak_rare = item(
+        "weak-rare",
+        "Weak Rare Blade",
         LootRarity::Rare,
         EquipmentSlot::Weapon,
-        Default::default(),
+        StatModifiers {
+            damage: StatModifier {
+                flat: 1.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
     );
-    let common = item(
-        "common_blade",
-        "Common Blade",
+    let strong_common = item(
+        "strong-common",
+        "Strong Common Blade",
         LootRarity::Common,
         EquipmentSlot::Weapon,
-        Default::default(),
+        StatModifiers {
+            damage: StatModifier {
+                flat: 8.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
     );
     let mut equipment = Equipment::default();
 
-    assert!(equipment.equip_if_upgrade(&rare));
-    assert!(!equipment.equip_if_upgrade(&common));
+    assert!(equipment.equip_if_upgrade(&weak_rare));
+    assert!(equipment.equip_if_upgrade(&strong_common));
     assert_eq!(
         equipment.item_name(EquipmentSlot::Weapon),
-        Some("Rare Blade")
+        Some("Strong Common Blade")
     );
 }

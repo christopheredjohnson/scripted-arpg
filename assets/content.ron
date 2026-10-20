@@ -1,5 +1,95 @@
 (
-    starting_encounter: "arena_one",
+    default_class: "vanguard",
+    classes: [
+        (
+            id: "vanguard",
+            name: "Vanguard",
+            abilities: ["strike", "cleave", "whirlwind", "charge", "guard"],
+        ),
+    ],
+    abilities: [
+        (
+            id: "strike",
+            name: "Strike",
+            target: NearestEnemy,
+            base_damage: 12.0,
+            damage_scaling: 1.0,
+            range: 1.45,
+            cooldown: 0.65,
+        ),
+        (
+            id: "cleave",
+            name: "Cleave",
+            target: Area(max_targets: Some(3), approach: true),
+            base_damage: 10.0,
+            damage_scaling: 0.85,
+            range: 2.0,
+            cooldown: 2.0,
+        ),
+        (
+            id: "whirlwind",
+            name: "Whirlwind",
+            target: Area(max_targets: None, approach: false),
+            base_damage: 20.0,
+            damage_scaling: 1.0,
+            range: 3.5,
+            cooldown: 4.0,
+            target_effects: [
+                (id: "whirlwind_stun", duration: 0.75, kind: Stun),
+                (
+                    id: "whirlwind_slow",
+                    duration: 2.0,
+                    kind: StatModifier(modifiers: (
+                        move_speed: (increased: -0.25),
+                        attack_speed: (increased: -0.2),
+                    )),
+                ),
+            ],
+        ),
+        (
+            id: "charge",
+            name: "Charge",
+            target: NearestEnemy,
+            base_damage: 18.0,
+            damage_scaling: 1.4,
+            range: 1.25,
+            cooldown: 5.0,
+            move_speed_multiplier: 2.2,
+            target_effects: [
+                (id: "charge_stun", duration: 0.45, kind: Stun),
+            ],
+        ),
+        (
+            id: "guard",
+            name: "Guard",
+            target: SelfCast,
+            range: 0.0,
+            cooldown: 7.0,
+            self_effects: [
+                (
+                    id: "guard_regeneration",
+                    duration: 2.5,
+                    kind: Regeneration(healing_per_second: 10.0),
+                ),
+                (
+                    id: "guard_defense",
+                    duration: 2.5,
+                    kind: StatModifier(modifiers: (
+                        defense: (flat: 30.0),
+                    )),
+                ),
+            ],
+        ),
+    ],
+    encounter_sequence: ["arena_one", "arena_two", "arena_three"],
+    wave_scaling: (
+        health_per_wave: 0.15,
+        damage_per_wave: 0.08,
+        defense_per_wave: 2.0,
+        move_speed_per_wave: 0.01,
+        attack_speed_per_wave: 0.01,
+        xp_per_wave: 0.1,
+    ),
     items: [
         (
             id: "scout_boots",
@@ -31,6 +121,77 @@
             ),
         ),
     ],
+    affixes: [
+        (
+            id: "keen",
+            name: "Keen",
+            slots: [Weapon],
+            min_item_level: 1,
+            weight: 60,
+            modifiers: (damage: (flat: 2.0)),
+        ),
+        (
+            id: "swift",
+            name: "Swift",
+            slots: [Weapon, Boots],
+            min_item_level: 1,
+            weight: 40,
+            modifiers: (
+                move_speed: (flat: 0.25),
+                attack_speed: (increased: 0.04),
+            ),
+        ),
+        (
+            id: "stout",
+            name: "Stout",
+            slots: [Armor, Boots],
+            min_item_level: 1,
+            weight: 55,
+            modifiers: (
+                max_health: (flat: 8.0),
+                defense: (flat: 3.0),
+            ),
+        ),
+        (
+            id: "brutal",
+            name: "Brutal",
+            slots: [Weapon],
+            min_item_level: 4,
+            weight: 20,
+            modifiers: (
+                damage: (flat: 4.0),
+                attack_speed: (increased: 0.05),
+            ),
+        ),
+        (
+            id: "reinforced",
+            name: "Reinforced",
+            slots: [Armor],
+            min_item_level: 3,
+            weight: 45,
+            modifiers: (defense: (flat: 7.0)),
+        ),
+    ],
+    drop_tables: [
+        (
+            id: "grunt_drops",
+            entries: [(item: "scout_boots", weight: 100)],
+        ),
+        (
+            id: "raider_drops",
+            entries: [
+                (item: "raider_blade", weight: 75),
+                (item: "scout_boots", weight: 25),
+            ],
+        ),
+        (
+            id: "elite_drops",
+            entries: [
+                (item: "warded_plate", weight: 70),
+                (item: "raider_blade", weight: 30),
+            ],
+        ),
+    ],
     enemy_archetypes: [
         (
             id: "grunt",
@@ -43,36 +204,44 @@
             ),
             attack_range: 1.25,
             attack_cooldown: 1.1,
-            drop_item: "scout_boots",
+            attack_windup: 0.45,
+            drop_table: "grunt_drops",
             xp_reward: 12,
         ),
         (
             id: "raider",
             stats: (
-                max_health: 46.0,
-                damage: 4.0,
-                defense: 0.0,
-                move_speed: 2.25,
-                attack_speed: 1.0,
+                max_health: 58.0,
+                damage: 5.0,
+                defense: 2.0,
+                move_speed: 2.5,
+                attack_speed: 1.1,
             ),
             attack_range: 1.25,
-            attack_cooldown: 1.1,
-            drop_item: "raider_blade",
+            attack_cooldown: 1.0,
+            attack_windup: 0.35,
+            drop_table: "raider_drops",
             xp_reward: 20,
         ),
         (
             id: "elite",
             stats: (
-                max_health: 46.0,
-                damage: 4.0,
-                defense: 0.0,
-                move_speed: 2.25,
+                max_health: 85.0,
+                damage: 7.0,
+                defense: 10.0,
+                move_speed: 2.0,
                 attack_speed: 1.0,
             ),
             attack_range: 1.25,
-            attack_cooldown: 1.1,
-            drop_item: "warded_plate",
+            attack_cooldown: 0.9,
+            attack_windup: 0.7,
+            drop_table: "elite_drops",
             xp_reward: 50,
+            on_hit_effect: Some((
+                id: "elite_poison",
+                duration: 3.0,
+                kind: Poison(damage_per_second: 3.0),
+            )),
         ),
     ],
     spawn_groups: [
@@ -90,11 +259,42 @@
                 (archetype: "elite", x: -7.1, z: 1.5),
             ],
         ),
+        (
+            id: "raider_wave",
+            attack_stagger: 0.1,
+            enemies: [
+                (archetype: "raider", x: -7.0, z: -4.0),
+                (archetype: "raider", x: -7.0, z: 4.0),
+                (archetype: "grunt", x: -1.5, z: -7.2),
+                (archetype: "grunt", x: 1.5, z: 7.2),
+                (archetype: "raider", x: 7.0, z: -4.0),
+                (archetype: "raider", x: 7.0, z: 4.0),
+            ],
+        ),
+        (
+            id: "elite_guard",
+            attack_stagger: 0.14,
+            enemies: [
+                (archetype: "elite", x: -6.5, z: -4.5),
+                (archetype: "raider", x: -6.5, z: 4.5),
+                (archetype: "elite", x: 0.0, z: -7.0),
+                (archetype: "raider", x: 6.5, z: 4.5),
+                (archetype: "elite", x: 6.5, z: -4.5),
+            ],
+        ),
     ],
     encounters: [
         (
             id: "arena_one",
             spawn_groups: ["outer_ring"],
+        ),
+        (
+            id: "arena_two",
+            spawn_groups: ["raider_wave"],
+        ),
+        (
+            id: "arena_three",
+            spawn_groups: ["elite_guard"],
         ),
     ],
 )
