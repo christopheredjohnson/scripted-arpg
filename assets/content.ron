@@ -1,0 +1,100 @@
+(
+    starting_encounter: "arena_one",
+    items: [
+        (
+            id: "scout_boots",
+            name: "Scout Boots",
+            rarity: Common,
+            slot: Boots,
+            modifiers: (
+                move_speed: (flat: 0.8),
+            ),
+        ),
+        (
+            id: "raider_blade",
+            name: "Raider Blade",
+            rarity: Rare,
+            slot: Weapon,
+            modifiers: (
+                damage: (flat: 5.0),
+                attack_speed: (increased: 0.1),
+            ),
+        ),
+        (
+            id: "warded_plate",
+            name: "Warded Plate",
+            rarity: Epic,
+            slot: Armor,
+            modifiers: (
+                max_health: (flat: 30.0),
+                defense: (flat: 20.0),
+            ),
+        ),
+    ],
+    enemy_archetypes: [
+        (
+            id: "grunt",
+            stats: (
+                max_health: 46.0,
+                damage: 4.0,
+                defense: 0.0,
+                move_speed: 2.25,
+                attack_speed: 1.0,
+            ),
+            attack_range: 1.25,
+            attack_cooldown: 1.1,
+            drop_item: "scout_boots",
+            xp_reward: 12,
+        ),
+        (
+            id: "raider",
+            stats: (
+                max_health: 46.0,
+                damage: 4.0,
+                defense: 0.0,
+                move_speed: 2.25,
+                attack_speed: 1.0,
+            ),
+            attack_range: 1.25,
+            attack_cooldown: 1.1,
+            drop_item: "raider_blade",
+            xp_reward: 20,
+        ),
+        (
+            id: "elite",
+            stats: (
+                max_health: 46.0,
+                damage: 4.0,
+                defense: 0.0,
+                move_speed: 2.25,
+                attack_speed: 1.0,
+            ),
+            attack_range: 1.25,
+            attack_cooldown: 1.1,
+            drop_item: "warded_plate",
+            xp_reward: 50,
+        ),
+    ],
+    spawn_groups: [
+        (
+            id: "outer_ring",
+            attack_stagger: 0.08,
+            enemies: [
+                (archetype: "raider", x: -6.8, z: -3.8),
+                (archetype: "grunt", x: -4.8, z: 5.8),
+                (archetype: "grunt", x: -0.8, z: -7.2),
+                (archetype: "raider", x: 4.5, z: -5.5),
+                (archetype: "grunt", x: 7.0, z: -0.8),
+                (archetype: "grunt", x: 5.2, z: 5.6),
+                (archetype: "grunt", x: 0.3, z: 7.3),
+                (archetype: "elite", x: -7.1, z: 1.5),
+            ],
+        ),
+    ],
+    encounters: [
+        (
+            id: "arena_one",
+            spawn_groups: ["outer_ring"],
+        ),
+    ],
+)
